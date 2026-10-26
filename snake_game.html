@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Snake</title>
+    <style>
+        /* ===== 구글 스네이크 원본 그래픽 & 극한의 쫀득한 모션 피직스 ===== */
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@500;700;900&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            background-color: #2b3035;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Roboto', -apple-system, sans-serif;
+            overflow: hidden;
+        }
+
+        #gameWrapper {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.45);
+            background: #4a752c;
+        }
+
+        /* 상단 바 */
+        #headerBar {
+            width: 520px;
+            height: 52px;
+            background: #4a752c;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            color: #ffffff;
+            z-index: 10;
+        }
+
+        .left-score {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 26px;
+            font-weight: 700;
+        }
+
+        .header-apple-svg {
+            width: 28px;
+            height: 28px;
+            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25));
+        }
+
+        .right-icons {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .util-btn {
+            background: none;
+            border: none;
+            color: #ffffff;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.9;
+            transition: opacity 0.15s, transform 0.1s;
+        }
+
+        .util-btn:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        .util-btn svg {
+            width: 22px;
+            height: 22px;
+            fill: #ffffff;
+        }
+
+        /* 액자형 테두리 */
+        #boardFrame {
+            position: relative;
+            background: #578a34;
+            padding: 16px;
+        }
+
+        canvas {
+            display: block;
+            border-radius: 2px;
+        }
+
+        /* 상태 뱃지 */
+        #effectBar {
+            position: absolute;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        .effect-pill {
+            padding: 4px 12px;
+            border-radius: 14px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            animation: popIn 0.2s ease-out;
+        }
+
+        .pill-gold { background: #f4b400; color: #222; }
+        .pill-poison { background: #9334e6; }
+        .pill-speedrun { background: #e74c3c; font-size: 15px; }
+
+        @keyframes popIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        /* 오버레이 */
+        .overlay {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            width: calc(100% - 32px);
+            height: calc(100% - 32px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 30;
+        }
+
+        .overlay.hidden { display: none; }
+
+        #startOverlay {
+            background: rgba(0, 0, 0, 0.25);
+        }
+
+        .play-btn {
+            width: 76px;
+            height: 76px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            transition: transform 0.15s;
+        }
+
+        .play-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .play-btn svg {
+            width: 34px;
+            height: 34px;
+            fill: #4774ea;
+            margin-left: 4px;
+        }
+
+        /* 게임 오버 팝업 */
+        #gameOverOverlay {
+            background: rgba(0, 0, 0, 0.35);
+        }
+
+        .go-dialog {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 24px 34px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 260px;
+        }
+
+        .go-scores {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            margin-bottom: 20px;
+        }
+
+        .go-score-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 32px;
+            font-weight: 900;
+            color: #202124;
+        }
+
+        .replay-btn {
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            background: #4774ea;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 14px rgba(71, 116, 234, 0.4);
+            transition: transform 0.2s, background 0.15s;
+        }
+
+        .replay-btn:hover {
+            background: #3963d4;
+            transform: scale(1.1) rotate(180deg);
+        }
+
+        .replay-btn svg {
+            width: 28px;
+            height: 28px;
+            fill: #ffffff;
+        }
+
+        /* 모드 메뉴 모달 */
+        #modeModal {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            width: calc(100% - 32px);
+            height: calc(100% - 32px);
+            background: rgba(255, 255, 255, 0.98);
+            z-index: 40;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #modeModal.hidden { display: none; }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #202124;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 20px;
+            color: #5f6368;
+        }
+
+        .mode-opt {
+            border: 2px solid #dadce0;
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .mode-opt:hover {
+            border-color: #4774ea;
+            background: #f0f4ff;
+        }
+
+        .mode-opt.active {
+            border-color: #4774ea;
+            background: #e8f0fe;
+        }
+
+        .mode-opt .m-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #202124;
+        }
+
+        .mode-opt .m-desc {
+            font-size: 12px;
+            color: #5f6368;
+            margin-top: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="gameWrapper">
+        <div id="headerBar">
+            <div class="left-score">
+                <svg class="header-apple-svg" viewBox="0 0 24 24">
+                    <circle cx="12" cy="14" r="8" fill="#e7471d"/>
+                    <path d="M12 6 C12 6 13.5 2 15.5 2" stroke="#33691e" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+                    <ellipse cx="14.5" cy="4.2" rx="3.5" ry="2" fill="#689f38" transform="rotate(25 14.5 4.2)"/>
+                </svg>
+                <span id="scoreText">0</span>
+            </div>
+
+            <div class="right-icons">
+                <button class="util-btn" id="btnFullscreen" title="전체화면">
+                    <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+                </button>
+                <button class="util-btn" id="btnAudio" title="소리 토글">
+                    <svg id="audioIcon" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                </button>
+                <button class="util-btn" id="btnMenu" title="모드 메뉴">
+                    <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <div id="boardFrame">
+            <canvas id="cv" width="480" height="480"></canvas>
+
+            <div id="effectBar"></div>
+
+            <div id="startOverlay" class="overlay">
+                <button class="play-btn" id="playBtn">
+                    <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                </button>
+            </div>
+
+            <div id="gameOverOverlay" class="overlay hidden">
+                <div class="go-dialog">
+                    <div class="go-scores">
+                        <div class="go-score-item">
+                            <svg viewBox="0 0 24 24" width="30" height="30">
+                                <circle cx="12" cy="14" r="8" fill="#e7471d"/>
+                                <path d="M12 6 C12 6 13.5 2 15.5 2" stroke="#33691e" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+                                <ellipse cx="14.5" cy="4.2" rx="3.5" ry="2" fill="#689f38" transform="rotate(25 14.5 4.2)"/>
+                            </svg>
+                            <span id="finalScoreVal">0</span>
+                        </div>
+                        <div class="go-score-item">
+                            <svg viewBox="0 0 24 24" width="28" height="28">
+                                <path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94A5.01 5.01 0 0011 15.9V19H7v2h10v-2h-4v-3.1c1.87-.36 3.32-1.8 3.61-3.96C19.08 11.63 21 9.55 21 7V5c0-1.1-.9-2-2-2zm-14 3V5h2v4.8C5.83 9.4 5 8.78 5 8zm14 0c0 .78-.83 1.4-2 1.8V5h2v3z" fill="#f4b400"/>
+                            </svg>
+                            <span id="bestScoreVal">0</span>
+                        </div>
+                    </div>
+                    <button class="replay-btn" id="retryBtn" title="다시 시작">
+                        <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div id="modeModal" class="hidden">
+                <div class="modal-title">
+                    <span>게임 모드</span>
+                    <button class="close-btn" id="closeModalBtn">&times;</button>
+                </div>
+                <div class="mode-opt active" data-mode="classic">
+                    <div class="m-title">🍎 클래식 모드</div>
+                    <div class="m-desc">구글 스네이크의 기본 규칙 (시간 제한 없음)</div>
+                </div>
+                <div class="mode-opt" data-mode="speedrun">
+                    <div class="m-title">⏱️ 스피드런 모드 (60초)</div>
+                    <div class="m-desc">60초 안에 최대한 많은 사과를 먹는 모드</div>
+                </div>
+                <div class="mode-opt" data-mode="obstacle">
+                    <div class="m-title">🧱 장애물 모드</div>
+                    <div class="m-desc">30초마다 재배치되는 벽 장애물을 회피하는 모드</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+// ============================================================================
+//  🐍 구글 스네이크 - 극한으로 다듬은 코너 곡률 & 레일 피직스 엔진
+// ============================================================================
+
+const GRID = 16;
+const CELL = 30;
+const BOARD_PX = GRID * CELL;
+
+// 색상 팔레트
+const C_LIGHT   = '#aad751';
+const C_DARK    = '#a2d149';
+const C_BLUE    = '#4774ea';
+const C_INSIDE  = '#264296';
+const C_OBSTACLE= '#4a752c';
+
+const APPLES = {
+    NORMAL: { col: '#e7471d', pts: 1 },
+    GOLDEN: { col: '#f4b400', pts: 3 },
+    POISON: { col: '#9334e6', pts: 1 },
+    BLUE:   { col: '#4285f4', pts: 1 },
+};
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const scoreText = document.getElementById('scoreText');
+const effectBar = document.getElementById('effectBar');
+const startOverlay = document.getElementById('startOverlay');
+const gameOverOverlay = document.getElementById('gameOverOverlay');
+const finalScoreVal = document.getElementById('finalScoreVal');
+const bestScoreVal = document.getElementById('bestScoreVal');
+const modeModal = document.getElementById('modeModal');
+
+let audioOn = true;
+let ac = null;
+function getAC() {
+    if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
+    return ac;
+}
+function tone(f, dur, type='sine', vol=0.1, fEnd=null) {
+    if (!audioOn) return;
+    try {
+        const c = getAC();
+        const osc = c.createOscillator();
+        const g = c.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(f, c.currentTime);
+        if (fEnd) osc.frequency.linearRampToValueAtTime(fEnd, c.currentTime + dur);
+        g.gain.setValueAtTime(vol, c.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + dur);
+        osc.connect(g); g.connect(c.destination);
+        osc.start(); osc.stop(c.currentTime + dur);
+    } catch(e) {}
+}
+
+const SFX = {
+    eat:     () => tone(620, 0.08, 'sine', 0.12, 950),
+    golden:  () => { tone(523, 0.1, 'triangle', 0.12); setTimeout(()=>tone(659,0.1,'triangle',0.12),80); setTimeout(()=>tone(784,0.15,'triangle',0.15),160); },
+    poison:  () => tone(350, 0.2, 'sawtooth', 0.08, 160),
+    blue:    () => tone(1000, 0.06, 'sine', 0.1, 450),
+    die:     () => tone(180, 0.35, 'sawtooth', 0.12, 60),
+    record:  () => [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tone(f, 0.14, 'sine', 0.09), i * 90)),
+};
+
+let state = 'ready';
+let mode = 'classic';
+let score = 0;
+let bestScores = { classic: 0, speedrun: 0, obstacle: 0 };
+
+try {
+    const s = localStorage.getItem('google_snake_best_rec');
+    if (s) bestScores = { ...bestScores, ...JSON.parse(s) };
+} catch(e) {}
+
+// 뱀 세그먼트 배열: [{x, y}]
+let snake = [];
+let dir = { x: 1, y: 0 };
+let prevDir = { x: 1, y: 0 };
+let inputQueue = [];
+
+// 버퍼 상태
+let tailPrev = { x: 2, y: 7 }; // 꼬리가 줄어들 때 매끄러운 수축 보간을 위한 좌표
+let isGrowing = false;
+
+// 쫀득한 연출용 변수
+let headScale = 1.0;          // 사과 삼킬 때 머리 팽창 탄성 (Squash & Stretch)
+let mouthOpenAmount = 0.0;    // 입 벌림 보간 (0.0: 다뭄 ~ 1.0: 쩍 벌림)
+let headAngle = 0;            // 머리 회전 부드러운 각도 보간 (Slerp)
+let targetAngle = 0;
+
+let apple = null;
+let obstacles = [];
+let stomachBulges = [];
+
+let invTimer = 0;
+let poisTimer = 0;
+let isReversed = false;
+let srTime = 60000;
+let obsTime = 30000;
+
+// 구글 스네이크 원본 황금 틱 속도 (가장 쾌적하고 쫀득한 98ms)
+const BASE_TICK = 98;
+let currentTick = BASE_TICK;
+let lastTickTime = 0;
+let tickProgress = 0;
+
+function getEmptyCell() {
+    const occ = new Set();
+    snake.forEach(s => occ.add(`${s.x},${s.y}`));
+    obstacles.forEach(o => occ.add(`${o.x},${o.y}`));
+    if (apple) occ.add(`${apple.x},${apple.y}`);
+
+    const free = [];
+    for (let x = 0; x < GRID; x++) {
+        for (let y = 0; y < GRID; y++) {
+            if (!occ.has(`${x},${y}`)) free.push({ x, y });
+        }
+    }
+    return free.length ? free[Math.floor(Math.random() * free.length)] : null;
+}
+
+function spawnApple() {
+    const c = getEmptyCell();
+    if (!c) return;
+    const r = Math.random();
+    let type = 'NORMAL';
+    if (r < 0.05) type = 'GOLDEN';
+    else if (r < 0.10) type = 'POISON';
+    else if (r < 0.15) type = 'BLUE';
+    apple = { x: c.x, y: c.y, type };
+}
+
+function spawnObstacles() {
+    obstacles = [];
+    const count = 7 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < count; i++) {
+        const c = getEmptyCell();
+        if (c) obstacles.push(c);
+    }
+}
+
+function reset(newMode) {
+    mode = newMode;
+    score = 0;
+    scoreText.textContent = score;
+
+    snake = [
+        { x: 5, y: 7 },
+        { x: 4, y: 7 },
+        { x: 3, y: 7 }
+    ];
+    dir = { x: 1, y: 0 };
+    prevDir = { x: 1, y: 0 };
+    tailPrev = { x: 2, y: 7 };
+    isGrowing = false;
+    inputQueue = [];
+    stomachBulges = [];
+
+    headScale = 1.0;
+    mouthOpenAmount = 0.0;
+    headAngle = 0;
+    targetAngle = 0;
+
+    invTimer = 0;
+    poisTimer = 0;
+    isReversed = false;
+    currentTick = BASE_TICK;
+    srTime = 60000;
+    obsTime = 30000;
+
+    obstacles = [];
+    if (mode === 'obstacle') spawnObstacles();
+    apple = null;
+    spawnApple();
+
+    updateEffectUI();
+}
+
+function startGame(m = mode) {
+    getAC();
+    reset(m);
+    state = 'playing';
+    startOverlay.classList.add('hidden');
+    gameOverOverlay.classList.add('hidden');
+    modeModal.classList.add('hidden');
+    lastTickTime = performance.now();
+}
+
+// ============================================================================
+//  그리드 틱 이동
+// ============================================================================
+function gameStep() {
+    prevDir = { ...dir };
+    if (inputQueue.length > 0) {
+        dir = inputQueue.shift();
+    }
+    targetAngle = Math.atan2(dir.y, dir.x);
+
+    const head = snake[0];
+    const nx = head.x + dir.x;
+    const ny = head.y + dir.y;
+
+    const hitWall = nx < 0 || nx >= GRID || ny < 0 || ny >= GRID;
+    const hitSelf = snake.some((s, idx) => idx > 0 && s.x === nx && s.y === ny);
+    const hitObstacle = obstacles.some(o => o.x === nx && o.y === ny);
+
+    if (hitWall || hitSelf || hitObstacle) {
+        if (invTimer > 0) {
+            let wx = nx, wy = ny;
+            if (nx < 0) wx = GRID - 1;
+            else if (nx >= GRID) wx = 0;
+            if (ny < 0) wy = GRID - 1;
+            else if (ny >= GRID) wy = 0;
+            advance(wx, wy);
+        } else {
+            handleGameOver();
+            return;
+        }
+    } else {
+        advance(nx, ny);
+    }
+}
+
+function advance(nx, ny) {
+    const ate = (apple && nx === apple.x && ny === apple.y);
+
+    snake.unshift({ x: nx, y: ny });
+
+    stomachBulges.forEach(b => b.progress += 1);
+    stomachBulges = stomachBulges.filter(b => b.progress < snake.length);
+
+    if (ate) {
+        isGrowing = true;
+        headScale = 1.25; // 꿀꺽 삼키는 찰진 팽창 타격감!
+        consumeApple();
+    } else {
+        isGrowing = false;
+        tailPrev = snake.pop(); // 사라지는 직전 꼬리 위치 보관 (자연스러운 꼬리 수축)
+    }
+}
+
+function consumeApple() {
+    const item = APPLES[apple.type];
+    score += item.pts;
+    scoreText.textContent = score;
+
+    stomachBulges.push({ progress: 0 });
+
+    switch(apple.type) {
+        case 'NORMAL':
+            SFX.eat();
+            break;
+        case 'GOLDEN':
+            invTimer = 3000;
+            SFX.golden();
+            break;
+        case 'POISON':
+            poisTimer = 2000;
+            isReversed = true;
+            currentTick = 60; // 맹렬한 스피드
+            SFX.poison();
+            break;
+        case 'BLUE':
+            if (snake.length > 2) {
+                tailPrev = snake.pop();
+            }
+            SFX.blue();
+            break;
+    }
+
+    spawnApple();
+    updateEffectUI();
+}
+
+function handleGameOver() {
+    state = 'over';
+    SFX.die();
+
+    const prev = bestScores[mode] || 0;
+    if (score > prev) {
+        bestScores[mode] = score;
+        try { localStorage.setItem('google_snake_best_rec', JSON.stringify(bestScores)); } catch(e) {}
+        SFX.record();
+    }
+
+    finalScoreVal.textContent = score;
+    bestScoreVal.textContent = bestScores[mode];
+
+    setTimeout(() => {
+        gameOverOverlay.classList.remove('hidden');
+    }, 280);
+}
+
+function updateEffectUI() {
+    let html = '';
+    if (mode === 'speedrun') {
+        const sec = Math.max(0, Math.ceil(srTime / 1000));
+        html += `<div class="effect-pill pill-speedrun">⏱️ ${sec}s</div>`;
+    }
+    if (invTimer > 0) {
+        html += `<div class="effect-pill pill-gold">⭐ 무적 ${(invTimer/1000).toFixed(1)}s</div>`;
+    }
+    if (poisTimer > 0) {
+        html += `<div class="effect-pill pill-poison">💀 반전 ${(poisTimer/1000).toFixed(1)}s</div>`;
+    }
+    effectBar.innerHTML = html;
+}
+
+// ============================================================================
+//  즉각 반응 큐 입력 핸들링
+// ============================================================================
+window.addEventListener('keydown', (e) => {
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyW','KeyS','KeyA','KeyD','Space'].includes(e.code)) {
+        e.preventDefault();
+    }
+
+    if (e.code === 'Space') {
+        if (state === 'ready' || state === 'over') startGame();
+        return;
+    }
+
+    if (state === 'ready') startGame();
+    if (state !== 'playing') return;
+
+    let u = { x: 0, y: -1 }, d = { x: 0, y: 1 }, l = { x: -1, y: 0 }, r = { x: 1, y: 0 };
+    if (isReversed) { [u, d] = [d, u]; [l, r] = [r, l]; }
+
+    let req = null;
+    switch(e.code) {
+        case 'ArrowUp': case 'KeyW':    req = u; break;
+        case 'ArrowDown': case 'KeyS':  req = d; break;
+        case 'ArrowLeft': case 'KeyA':  req = l; break;
+        case 'ArrowRight': case 'KeyD': req = r; break;
+    }
+
+    if (req) {
+        const last = inputQueue.length > 0 ? inputQueue[inputQueue.length - 1] : dir;
+        if (req.x !== -last.x || req.y !== -last.y) {
+            if (req.x !== last.x || req.y !== last.y) {
+                if (inputQueue.length < 2) inputQueue.push(req);
+            }
+        }
+    }
+});
+
+// UI
+document.getElementById('playBtn').addEventListener('click', () => startGame());
+document.getElementById('retryBtn').addEventListener('click', () => startGame());
+document.getElementById('btnMenu').addEventListener('click', () => modeModal.classList.toggle('hidden'));
+document.getElementById('closeModalBtn').addEventListener('click', () => modeModal.classList.add('hidden'));
+document.querySelectorAll('.mode-opt').forEach(opt => {
+    opt.addEventListener('click', () => {
+        document.querySelectorAll('.mode-opt').forEach(o => o.classList.remove('active'));
+        opt.classList.add('active');
+        modeModal.classList.add('hidden');
+        startGame(opt.getAttribute('data-mode'));
+    });
+});
+document.getElementById('btnAudio').addEventListener('click', () => {
+    audioOn = !audioOn;
+    document.getElementById('btnAudio').style.opacity = audioOn ? '1' : '0.4';
+});
+document.getElementById('btnFullscreen').addEventListener('click', () => {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
+    else document.exitFullscreen().catch(()=>{});
+});
+
+// ============================================================================
+//  메인 렌더 루프 & 각도/탄성/모션 부드러운 스무딩
+// ============================================================================
+function loop(now) {
+    requestAnimationFrame(loop);
+
+    if (state === 'playing') {
+        const dt = now - (lastTickTime || now);
+
+        if (invTimer > 0) invTimer = Math.max(0, invTimer - (dt || 16));
+        if (poisTimer > 0) {
+            poisTimer = Math.max(0, poisTimer - (dt || 16));
+            if (poisTimer === 0) { isReversed = false; currentTick = BASE_TICK; }
+        }
+
+        if (mode === 'speedrun') {
+            srTime -= (dt || 16);
+            if (srTime <= 0) { handleGameOver(); return; }
+        }
+        if (mode === 'obstacle') {
+            obsTime -= (dt || 16);
+            if (obsTime <= 0) { obsTime = 30000; spawnObstacles(); }
+        }
+
+        updateEffectUI();
+
+        const elapsed = now - lastTickTime;
+        if (elapsed >= currentTick) {
+            lastTickTime = now;
+            gameStep();
+            tickProgress = 0;
+        } else {
+            tickProgress = Math.min(1.0, elapsed / currentTick);
+        }
+
+        // 1) 머리 회전 각도 보간 (최단 회전 경로 Slerp)
+        let diff = targetAngle - headAngle;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        headAngle += diff * 0.35; // 부드럽고 재빠른 고개 회전
+
+        // 2) 사과 근접 시 입 벌림 양(0.0~1.0) 부드러운 이징(Easing)
+        let targetMouth = 0.0;
+        if (apple) {
+            const dist = Math.hypot(snake[0].x - apple.x, snake[0].y - apple.y);
+            if (dist <= 3.2) targetMouth = 1.0;
+        }
+        mouthOpenAmount += (targetMouth - mouthOpenAmount) * 0.25;
+
+        // 3) 삼킬 때 머리 팽창 탄성 복원
+        headScale += (1.0 - headScale) * 0.18;
+    } else {
+        tickProgress = 1.0;
+    }
+
+    render(tickProgress);
+}
+
+// ============================================================================
+//  극한으로 깎아낸 구글 스네이크 레일 렌더러 (둥근 코너 곡률 완벽 지원)
+// ============================================================================
+function render(t) {
+    ctx.clearRect(0, 0, BOARD_PX, BOARD_PX);
+
+    // 1. 체커보드 배경
+    for (let r = 0; r < GRID; r++) {
+        for (let c = 0; c < GRID; c++) {
+            ctx.fillStyle = (r + c) % 2 === 0 ? C_LIGHT : C_DARK;
+            ctx.fillRect(c * CELL, r * CELL, CELL, CELL);
+        }
+    }
+
+    // 2. 장애물 블록
+    obstacles.forEach(o => {
+        ctx.fillStyle = C_OBSTACLE;
+        ctx.beginPath();
+        ctx.roundRect(o.x * CELL + 2, o.y * CELL + 2, CELL - 4, CELL - 4, 4);
+        ctx.fill();
+    });
+
+    // 3. 사과 렌더링
+    if (apple) {
+        drawApple(apple.x, apple.y, apple.type);
+    }
+
+    // 4. 레일 기반 무봉제 뱀 렌더링
+    if (snake.length > 0) {
+        drawContinuousSnake(t);
+    }
+}
+
+function drawApple(gx, gy, type) {
+    const cx = gx * CELL + CELL / 2;
+    const cy = gy * CELL + CELL / 2;
+    const r = CELL * 0.36;
+
+    ctx.save();
+    // 바닥 그림자
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.14)';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + r * 0.9, r * 0.9, r * 0.45, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 몸체
+    ctx.fillStyle = APPLES[type].col;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 줄기
+    ctx.strokeStyle = '#33691e';
+    ctx.lineWidth = 2.2;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - r + 1);
+    ctx.quadraticCurveTo(cx + 1, cy - r - 3, cx + 2.5, cy - r - 5);
+    ctx.stroke();
+
+    // 잎사귀
+    ctx.fillStyle = '#689f38';
+    ctx.beginPath();
+    ctx.ellipse(cx + 4, cy - r - 2, 4, 2.2, Math.PI / 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+}
+
+// ============================================================================
+//  뱀의 레일 경로를 연속 곡선으로 계산하는 최고급 렌더러
+// ============================================================================
+function drawContinuousSnake(t) {
+    const bodyWidth = CELL * 0.74;
+
+    // 머리와 꼬리의 정확한 부드러운 위치
+    // 머리: snake[1] -> snake[0] 방향으로 t만큼 전진
+    const h1 = snake[1] || snake[0];
+    const h0 = snake[0];
+
+    // 벽을 뚫고 지나가는 경우 순간 위치 보정
+    let headX = h0.x, headY = h0.y;
+    if (Math.abs(h0.x - h1.x) <= 1 && Math.abs(h0.y - h1.y) <= 1) {
+        headX = h1.x + (h0.x - h1.x) * t;
+        headY = h1.y + (h0.y - h1.y) * t;
+    }
+    const headPx = { x: headX * CELL + CELL / 2, y: headY * CELL + CELL / 2 };
+
+    // 꼬리: tailPrev -> snake[last] 로 t만큼 수축 따라오기
+    let tailPx;
+    if (isGrowing) {
+        const last = snake[snake.length - 1];
+        tailPx = { x: last.x * CELL + CELL / 2, y: last.y * CELL + CELL / 2 };
+    } else {
+        const last = snake[snake.length - 1];
+        const prev = tailPrev;
+        let tx = prev.x, ty = prev.y;
+        if (Math.abs(last.x - prev.x) <= 1 && Math.abs(last.y - prev.y) <= 1) {
+            tx = prev.x + (last.x - prev.x) * t;
+            ty = prev.y + (last.y - prev.y) * t;
+        } else {
+            tx = last.x; ty = last.y;
+        }
+        tailPx = { x: tx * CELL + CELL / 2, y: ty * CELL + CELL / 2 };
+    }
+
+    // 중간 마디들 (고정된 레일 좌표)
+    const midPoints = [];
+    midPoints.push(headPx);
+    for (let i = 1; i < snake.length - 1; i++) {
+        midPoints.push({
+            x: snake[i].x * CELL + CELL / 2,
+            y: snake[i].y * CELL + CELL / 2
+        });
+    }
+    midPoints.push(tailPx);
+
+    let mainColor = C_BLUE;
+    if (invTimer > 0) mainColor = '#f4b400';
+    if (poisTimer > 0) mainColor = '#9334e6';
+
+    // 1) 그림자 그리기
+    drawRailPath(midPoints, bodyWidth + 2, 'rgba(0,0,0,0.14)', 2.5);
+
+    // 2) 뱀 메인 몸통 그리기
+    drawRailPath(midPoints, bodyWidth, mainColor, 0);
+
+    // 3) 사과 소화 불룩함(Belly Bulge) 펄스
+    stomachBulges.forEach(b => {
+        const currProgress = b.progress + t;
+        if (currProgress >= 0 && currProgress < snake.length) {
+            const idx = Math.floor(currProgress);
+            const frac = currProgress - idx;
+            const p1 = snake[idx] || snake[0];
+            const p2 = snake[idx + 1] || p1;
+            const bx = (p1.x + (p2.x - p1.x) * frac) * CELL + CELL / 2;
+            const by = (p1.y + (p2.y - p1.y) * frac) * CELL + CELL / 2;
+
+            ctx.fillStyle = mainColor;
+            ctx.beginPath();
+            ctx.arc(bx, by, (bodyWidth / 2) * 1.34, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    });
+
+    // 4) 뱀 머리 (고개 회전 + 입 벌림 애니메이션 + 팽창 스쿼시)
+    drawSnakeHead(headPx, mainColor, bodyWidth);
+}
+
+// 레일 패스 그리기 (코너 곡률 arc 지원)
+function drawRailPath(points, width, strokeStyle, yOffset) {
+    if (points.length < 2) return;
+    ctx.save();
+    ctx.strokeStyle = strokeStyle;
+    ctx.lineWidth = width;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y + yOffset);
+
+    for (let i = 1; i < points.length; i++) {
+        // 벽을 랩어라운드할 때 긴 선이 그어지지 않도록 방지
+        const dist = Math.hypot(points[i].x - points[i-1].x, points[i].y - points[i-1].y);
+        if (dist > CELL * 2.5) {
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(points[i].x, points[i].y + yOffset);
+        } else {
+            ctx.lineTo(points[i].x, points[i].y + yOffset);
+        }
+    }
+    ctx.stroke();
+    ctx.restore();
+}
+
+// 뱀 머리 렌더링
+function drawSnakeHead(pos, mainColor, bodyWidth) {
+    const headRadius = (bodyWidth / 2) * headScale;
+
+    ctx.save();
+    ctx.translate(pos.x, pos.y);
+    ctx.rotate(headAngle);
+
+    // 입 벌림 연출
+    if (mouthOpenAmount > 0.05) {
+        const mouthAngle = (Math.PI / 2) * mouthOpenAmount;
+
+        // 입 속 짙은 남색
+        ctx.fillStyle = C_INSIDE;
+        ctx.beginPath();
+        ctx.arc(headRadius * 0.35, 0, headRadius * 0.95, -mouthAngle, mouthAngle);
+        ctx.closePath();
+        ctx.fill();
+
+        // 턱 라인
+        ctx.strokeStyle = mainColor;
+        ctx.lineWidth = 3.6;
+        ctx.beginPath();
+        ctx.arc(headRadius * 0.35, 0, headRadius * 0.95, -mouthAngle, mouthAngle);
+        ctx.stroke();
+
+        // 흰색 이빨 2개 (입 벌림에 따라 스르륵 드러남)
+        if (mouthOpenAmount > 0.35) {
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(headRadius * 0.6, -headRadius * 0.55);
+            ctx.lineTo(headRadius * 0.95, -headRadius * 0.3);
+            ctx.lineTo(headRadius * 0.5, -headRadius * 0.15);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(headRadius * 0.6, headRadius * 0.55);
+            ctx.lineTo(headRadius * 0.95, headRadius * 0.3);
+            ctx.lineTo(headRadius * 0.5, headRadius * 0.15);
+            ctx.closePath();
+            ctx.fill();
+        }
+    } else {
+        // 입 닫았을 때 콧구멍 2개
+        ctx.fillStyle = C_INSIDE;
+        ctx.beginPath();
+        ctx.arc(headRadius * 0.6, -3, 1.4, 0, Math.PI * 2);
+        ctx.arc(headRadius * 0.6, 3, 1.4, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // 눈 2개 (부드러운 크기 & 시선)
+    const eyeForward = headRadius * 0.05;
+    const eyeSpread  = headRadius * 0.58;
+    const eyeR       = 4.6 * headScale;
+    const pupilR     = 2.2 * headScale;
+
+    // 흰자
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(eyeForward, -eyeSpread, eyeR, 0, Math.PI * 2);
+    ctx.arc(eyeForward, eyeSpread, eyeR, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 동자
+    ctx.fillStyle = '#1c3177';
+    ctx.beginPath();
+    ctx.arc(eyeForward + 1.8, -eyeSpread, pupilR, 0, Math.PI * 2);
+    ctx.arc(eyeForward + 1.8, eyeSpread, pupilR, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+}
+
+// 시작
+reset('classic');
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
